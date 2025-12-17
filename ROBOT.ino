@@ -6,8 +6,10 @@ const int echoPin = 10;
 AF_DCMotor moteurGauche(3);
 AF_DCMotor moteurDroit(4);
 
-const int VITESSE_MAX = 255;
-const int VITESSE_MIN = 240;
+const int VITESSE_MAX = 180;
+const int VITESSE_MIN = 160;
+const float FACTEUR_COMPENSATION_GAUCHE = 1.0;
+const float FACTEUR_COMPENSATION_DROIT = 0.95;
 const int SEUIL_DETECTION_CM = 110;
 const int SEUIL_ALERTE_CM = 60;
 const int SEUIL_CRITIQUE_CM = 30;
@@ -122,8 +124,11 @@ void appliquerVitesseRamp() {
     else if (diffD < 0) vitesseActuelleDroite = max(vitesseCibleDroite, vitesseActuelleDroite - step);
   }
   
-  moteurGauche.setSpeed(vitesseActuelleGauche);
-  moteurDroit.setSpeed(vitesseActuelleDroite);
+  int vitesseGaucheCompensee = (int)(vitesseActuelleGauche * FACTEUR_COMPENSATION_GAUCHE);
+  int vitesseDroiteCompensee = (int)(vitesseActuelleDroite * FACTEUR_COMPENSATION_DROIT);
+  
+  moteurGauche.setSpeed(vitesseGaucheCompensee);
+  moteurDroit.setSpeed(vitesseDroiteCompensee);
   moteurGauche.run(FORWARD);
   moteurDroit.run(FORWARD);
 }
@@ -131,8 +136,9 @@ void appliquerVitesseRamp() {
 void reculer() {
   vitesseActuelleGauche = 0;
   vitesseActuelleDroite = 0;
-  moteurGauche.setSpeed(245);
-  moteurDroit.setSpeed(245);
+  int vitesseRecul = 170;
+  moteurGauche.setSpeed((int)(vitesseRecul * FACTEUR_COMPENSATION_GAUCHE));
+  moteurDroit.setSpeed((int)(vitesseRecul * FACTEUR_COMPENSATION_DROIT));
   moteurGauche.run(BACKWARD);
   moteurDroit.run(BACKWARD);
 }
@@ -140,9 +146,9 @@ void reculer() {
 void tournerAngle(bool droite, int angleDegres) {
   vitesseActuelleGauche = 0;
   vitesseActuelleDroite = 0;
-  int vitesse = 245;
-  moteurGauche.setSpeed(vitesse);
-  moteurDroit.setSpeed(vitesse);
+  int vitesse = 170;
+  moteurGauche.setSpeed((int)(vitesse * FACTEUR_COMPENSATION_GAUCHE));
+  moteurDroit.setSpeed((int)(vitesse * FACTEUR_COMPENSATION_DROIT));
   
   if (droite) {
     moteurGauche.run(FORWARD);
