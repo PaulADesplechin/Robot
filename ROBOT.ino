@@ -30,6 +30,8 @@ long historiqueDistance[8];
 int indexHistorique = 0;
 int nbMesuresValides = 0;
 int compteurObstacle = 0;
+int compteurBlocage = 0;
+unsigned long dernierObstacleTemps = 0;
 int vitesseActuelleGauche = 0;
 int vitesseActuelleDroite = 0;
 int vitesseCibleGauche = 0;
@@ -190,17 +192,20 @@ int calculerAngleRotation(long distance) {
     return 0;
   }
   
+  int angleBase = 0;
+  
   if (distance < SEUIL_CRITIQUE_CM) {
-    int angle = 75 + (compteurObstacle * 5);
-    if (angle > 120) angle = 120;
-    return angle;
+    angleBase = 85 + (compteurObstacle * 8) + (compteurBlocage * 15);
+    if (angleBase > 180) angleBase = 180;
   } else if (distance < SEUIL_ALERTE_CM) {
     float ratio = (float)(SEUIL_ALERTE_CM - distance) / (SEUIL_ALERTE_CM - SEUIL_CRITIQUE_CM);
-    return 55 + (int)(ratio * 20);
+    angleBase = 60 + (int)(ratio * 25) + (compteurBlocage * 10);
   } else {
     float ratio = (float)(SEUIL_DETECTION_CM - distance) / (SEUIL_DETECTION_CM - SEUIL_ALERTE_CM);
-    return (int)(ratio * 55);
+    angleBase = (int)(ratio * 60);
   }
+  
+  return angleBase;
 }
 
 long calculerDistanceUtilisee(long distance, long distanceMoyenne) {
@@ -263,12 +268,28 @@ void loop() {
   long distanceUtilisee = calculerDistanceUtilisee(distance, distanceMoyenne);
   unsigned long maintenant = millis();
 
+  if (distanceUtilisee < SEUIL_CRITIQUE_CM && distanceUtilisee > 1) {
+    if (maintenant - dernierObstacleTemps < 2000) {
+      compteurBlocage++;
+      if (compteurBlocage > 5) compteurBlocage = 5;
+    } else {
+      compteurBlocage = max(0, compteurBlocage - 1);
+    }
+    dernierObstacleTemps = maintenant;
+  } else if (distanceUtilisee > SEUIL_DETECTION_CM) {
+    compteurBlocage = 0;
+  }
+
   Serial.print("Dist:");
   Serial.print(distance);
   Serial.print(" use:");
   Serial.print(distanceUtilisee);
   Serial.print(" v:");
   Serial.print((vitesseActuelleGauche + vitesseActuelleDroite) / 2);
+  if (compteurBlocage > 0) {
+    Serial.print(" bloc:");
+    Serial.print(compteurBlocage);
+  }
 
   distancePrecedente = distance;
 
@@ -320,6 +341,7 @@ void loop() {
         Serial.println(" -> AVANCE DROIT");
         etat = AVANCE_DROIT;
         compteurObstacle = 0;
+        compteurBlocage = max(0, compteurBlocage - 1);
       }
       int vitesse = calculerVitesseAdaptative(distanceUtilisee);
       vitesseCibleGauche = vitesse;
@@ -352,17 +374,28 @@ void loop() {
     }
   } else if (etat == EVITER_OBSTACLE) {
     unsigned long tempsEcoule = maintenant - tempsDebut;
+    int dureeRecul = compteurBlocage > 2 ? 120 : 80;
+    int dureeArret = compteurBlocage > 2 ? 140 : 110;
 
-    if (tempsEcoule < 80) {
+    if (tempsEcoule < dureeRecul) {
       reculer();
       Serial.println(" -> RECUL");
-    } else if (tempsEcoule < 110) {
+    } else if (tempsEcoule < dureeArret) {
       arret();
       Serial.println(" -> ARRET");
     } else {
       int angle = calculerAngleRotation(distanceUtilisee);
-      if (angle < 55) angle = 65;
-      if (angle > 120) angle = 120;
+      
+      if (compteurBlocage > 3) {
+        angle = 180;
+        Serial.print(" -> ROTATION COMPLETE ");
+      } else if (compteurBlocage > 2) {
+        if (angle < 90) angle = 120;
+        if (angle > 180) angle = 180;
+      } else {
+        if (angle < 55) angle = 65;
+        if (angle > 120) angle = 120;
+      }
       
       Serial.print(" -> TOURNE ");
       Serial.print(tournerDroite ? "DROITE" : "GAUCHE");
@@ -371,7 +404,13 @@ void loop() {
       Serial.println("deg)");
       
       tournerAngle(tournerDroite, angle);
-      tournerDroite = !tournerDroite;
+      
+      if (compteurBlocage > 2) {
+        tournerDroite = !tournerDroite;
+      } else {
+        tournerDroite = !tournerDroite;
+      }
+      
       etat = AVANCE_DROIT;
     }
   }
