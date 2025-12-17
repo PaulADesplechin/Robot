@@ -243,10 +243,6 @@ Dist:85 use:82 conf:95 v:175 var:+2 -> CORRECTION LEGERE
 
 Ce projet est libre d'utilisation pour l'apprentissage et les projets personnels.
 
-## 👤 Auteur
-
-Paul-Adrien Desplechin
-
 ---
 
 **GO FAST** 🚀
