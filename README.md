@@ -1,4 +1,4 @@
-# 🤖 Robot Éviteur d'Obstacles Ultra-Performant
+# Robot Éviteur d'Obstacles Ultra-Performant
 
 ## GO FAST
 
@@ -6,7 +6,7 @@ Ce projet consiste à réaliser un **robot autonome ultra-performant** qui déte
 
 Le robot utilise un système de détection avancé avec **prédiction**, **corrections progressives** et **évitement intelligent** pour naviguer de manière fluide et réactive.
 
-## 🚀 Fonctionnalités
+## Fonctionnalités
 
 ### Détection Multi-Niveaux
 Le robot utilise **3 zones de détection** pour une réaction progressive :
@@ -54,7 +54,7 @@ Le robot utilise **4 états** pour un contrôle précis :
 - **Filtrage rapide** : 4 mesures en ~6ms
 - **Calculs optimisés** : historique réduit pour performance maximale
 
-## 📋 Matériel Requis
+## Matériel Requis
 
 - **Arduino Uno**
 - **Motor Shield** compatible AFMotor (Adafruit Motor Shield)
@@ -64,7 +64,7 @@ Le robot utilise **4 états** pour un contrôle précis :
 - **Batterie** 7-12V pour alimenter le shield
 - **Fils de connexion** (jumpers)
 
-## 🔌 Connexions
+## Connexions
 
 ### Capteur Ultrason HC-SR04
 - **Trig** → Pin 9 (Arduino)
@@ -77,7 +77,7 @@ Le robot utilise **4 états** pour un contrôle précis :
 - **Moteur Droit** → Port M4
 - Alimentation via connecteur batterie du shield
 
-## 📚 Bibliothèque Nécessaire
+## Bibliothèque Nécessaire
 
 ### AFMotor
 Bibliothèque pour contrôler le Motor Shield Adafruit.
@@ -90,7 +90,7 @@ Bibliothèque pour contrôler le Motor Shield Adafruit.
 
 **Lien GitHub :** https://github.com/adafruit/Adafruit-Motor-Shield-library
 
-## ⚙️ Configuration
+## Configuration
 
 ### Paramètres Principaux
 
@@ -114,7 +114,7 @@ const float FACTEUR_COMPENSATION_DROIT = 0.95;   // Ajuster selon besoin
 - **Diminuer** le facteur si le moteur va trop vite
 - **Augmenter** le facteur si le moteur va trop lentement
 
-## 🎯 Fonctionnement Détaillé
+## Fonctionnement Détaillé
 
 ### 1. Initialisation
 - Configuration des pins et moteurs
@@ -160,7 +160,7 @@ const float FACTEUR_COMPENSATION_DROIT = 0.95;   // Ajuster selon besoin
 - **Application rampe** : transition fluide vers nouvelle vitesse
 - **Compensation** : facteurs appliqués pour équilibrer moteurs
 
-## 🔧 Optimisations Techniques
+## Optimisations Techniques
 
 ### Filtrage des Mesures
 - **4 mesures** prises rapidement
@@ -180,7 +180,7 @@ const float FACTEUR_COMPENSATION_DROIT = 0.95;   // Ajuster selon besoin
 - **Compensation** : facteurs appliqués à chaque moteur
 - **Limites** : respect des VITESSE_MIN et VITESSE_MAX
 
-## 📊 Debug et Monitoring
+## Debug et Monitoring
 
 Le robot envoie des informations via Serial (9600 baud) :
 
@@ -194,7 +194,7 @@ Dist:85 use:82 conf:95 v:175 var:+2 -> CORRECTION LEGERE
 - **v** : Vitesse moyenne actuelle
 - **var** : Variation depuis dernière mesure
 
-## 🐛 Dépannage
+## Dépannage
 
 ### Le robot ne détecte pas les obstacles
 - Vérifier les connexions du capteur (Trig/Echo)
@@ -218,7 +218,7 @@ Dist:85 use:82 conf:95 v:175 var:+2 -> CORRECTION LEGERE
 - Ajuster les facteurs de compensation moteurs
 - Vérifier que les roues sont bien fixées
 
-## 📝 Structure du Code
+## Structure du Code
 
 - **`getDistance()`** : Lecture brute du capteur
 - **`getDistanceFiltree()`** : Filtrage et calcul de confiance
@@ -231,7 +231,7 @@ Dist:85 use:82 conf:95 v:175 var:+2 -> CORRECTION LEGERE
 - **`detecterPatternObstacle()`** : Détection patterns répétitifs
 - **`detecterChuteBrutale()`** : Détection obstacles fins
 
-## 🎓 Améliorations Futures Possibles
+## Améliorations Futures Possibles
 
 - Ajout de capteurs latéraux pour détection multi-directionnelle
 - Système de mémorisation de parcours
@@ -239,11 +239,11 @@ Dist:85 use:82 conf:95 v:175 var:+2 -> CORRECTION LEGERE
 - Enregistrement de statistiques (distance parcourue, obstacles évités)
 - Mode suivi de ligne combiné avec évitement d'obstacles
 
-## 📄 Licence
+## Licence
 
 Ce projet est libre d'utilisation pour l'apprentissage et les projets personnels.
 
 ---
 
-**GO FAST** 🚀
+**GO FAST**
 
