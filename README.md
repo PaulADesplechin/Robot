@@ -67,8 +67,8 @@ Le robot utilise **4 états** pour un contrôle précis :
 ## Connexions
 
 ### Capteur Ultrason HC-SR04
-- **Trig** → Pin 9 (Arduino)
-- **Echo** → Pin 10 (Arduino)
+- **Trig** → Pin 12 (Arduino)
+- **Echo** → Pin 13 (Arduino)
 - **VCC** → 5V
 - **GND** → GND
 
@@ -198,7 +198,7 @@ Dist:85 use:82 conf:95 v:175 var:+2 -> CORRECTION LEGERE
 
 ### Le robot ne détecte pas les obstacles
 - Vérifier les connexions du capteur (Trig/Echo)
-- Vérifier que les pins 9 et 10 sont libres
+- Vérifier que les pins 12 et 13 sont libres
 - Tester le capteur avec un code simple
 
 ### Le robot tourne toujours dans le même sens

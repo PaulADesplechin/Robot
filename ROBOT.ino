@@ -1,7 +1,7 @@
 #include <AFMotor.h>
 
-const int trigPin = 9;
-const int echoPin = 10;
+const int trigPin = 12;
+const int echoPin = 13;
 
 AF_DCMotor moteurGauche(3);
 AF_DCMotor moteurDroit(4);
