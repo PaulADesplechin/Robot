@@ -9,7 +9,7 @@ AF_DCMotor moteurDroit(4);
 const int VITESSE_MAX = 180;
 const int VITESSE_MIN = 165;
 const float FACTEUR_COMPENSATION_GAUCHE = 1.0;
-const float FACTEUR_COMPENSATION_DROIT = 0.95;
+const float FACTEUR_COMPENSATION_DROIT = 0.98;
 const int SEUIL_DETECTION_CM = 110;
 const int SEUIL_ALERTE_CM = 60;
 const int SEUIL_CRITIQUE_CM = 30;
@@ -94,24 +94,39 @@ void appliquerVitesseRamp() {
   int diffG = vitesseCibleGauche - vitesseActuelleGauche;
   int diffD = vitesseCibleDroite - vitesseActuelleDroite;
   
-  if (abs(diffG) > 5) {
-    int step = max(5, abs(diffG) / 2);
+  if (abs(diffG) > 3) {
+    int step = max(3, abs(diffG) / 3);
     if (diffG > 0) vitesseActuelleGauche = min(vitesseCibleGauche, vitesseActuelleGauche + step);
     else vitesseActuelleGauche = max(vitesseCibleGauche, vitesseActuelleGauche - step);
   } else {
     vitesseActuelleGauche = vitesseCibleGauche;
   }
   
-  if (abs(diffD) > 5) {
-    int step = max(5, abs(diffD) / 2);
+  if (abs(diffD) > 3) {
+    int step = max(3, abs(diffD) / 3);
     if (diffD > 0) vitesseActuelleDroite = min(vitesseCibleDroite, vitesseActuelleDroite + step);
     else vitesseActuelleDroite = max(vitesseCibleDroite, vitesseActuelleDroite - step);
   } else {
     vitesseActuelleDroite = vitesseCibleDroite;
   }
   
-  moteurGauche.setSpeed((int)(vitesseActuelleGauche * FACTEUR_COMPENSATION_GAUCHE));
-  moteurDroit.setSpeed((int)(vitesseActuelleDroite * FACTEUR_COMPENSATION_DROIT));
+  if (vitesseCibleGauche == vitesseCibleDroite && etat == AVANCE_DROIT) {
+    int vitesseMoyenne = (vitesseActuelleGauche + vitesseActuelleDroite) / 2;
+    vitesseActuelleGauche = vitesseMoyenne;
+    vitesseActuelleDroite = vitesseMoyenne;
+  }
+  
+  int vitesseGaucheFinale = (int)(vitesseActuelleGauche * FACTEUR_COMPENSATION_GAUCHE);
+  int vitesseDroiteFinale = (int)(vitesseActuelleDroite * FACTEUR_COMPENSATION_DROIT);
+  
+  if (vitesseCibleGauche == vitesseCibleDroite && etat == AVANCE_DROIT) {
+    int vitesseMoyenneFinale = (vitesseGaucheFinale + vitesseDroiteFinale) / 2;
+    vitesseGaucheFinale = vitesseMoyenneFinale;
+    vitesseDroiteFinale = vitesseMoyenneFinale;
+  }
+  
+  moteurGauche.setSpeed(vitesseGaucheFinale);
+  moteurDroit.setSpeed(vitesseDroiteFinale);
   moteurGauche.run(FORWARD);
   moteurDroit.run(FORWARD);
 }
@@ -307,7 +322,10 @@ void loop() {
         compteurObstacle = 0;
       }
       int vitesse = calculerVitesseAdaptative(distanceUtilisee);
-      avancerDroit(vitesse, vitesse);
+      vitesseCibleGauche = vitesse;
+      vitesseCibleDroite = vitesse;
+      vitesseActuelleGauche = vitesse;
+      vitesseActuelleDroite = vitesse;
       appliquerVitesseRamp();
     }
   } else if (etat == CORRECTION_LEGERE || etat == CORRECTION_FORTE) {
