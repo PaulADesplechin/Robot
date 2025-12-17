@@ -1,11 +1,11 @@
 #include <AFMotor.h>
-
+ 
 const int trigPin = 12;
 const int echoPin = 13;
-
+ 
 AF_DCMotor moteurGauche(3);
 AF_DCMotor moteurDroit(4);
-
+ 
 const int VITESSE_MAX = 180;
 const int VITESSE_MIN = 165;
 const float FACTEUR_COMPENSATION_GAUCHE = 1.0;
@@ -36,6 +36,8 @@ int vitesseActuelleGauche = 0;
 int vitesseActuelleDroite = 0;
 int vitesseCibleGauche = 0;
 int vitesseCibleDroite = 0;
+int dernierAngleRotation = 0;
+int tentativesMemeDirection = 0;
 
 long getDistance() {
   digitalWrite(trigPin, LOW);
@@ -43,7 +45,7 @@ long getDistance() {
   digitalWrite(trigPin, HIGH);
   delayMicroseconds(12);
   digitalWrite(trigPin, LOW);
-
+ 
   long duree = pulseIn(echoPin, HIGH, 25000);
   
   if (duree == 0) {
@@ -132,7 +134,7 @@ void appliquerVitesseRamp() {
   moteurGauche.run(FORWARD);
   moteurDroit.run(FORWARD);
 }
-
+ 
 void reculer() {
   vitesseActuelleGauche = 0;
   vitesseActuelleDroite = 0;
@@ -142,7 +144,7 @@ void reculer() {
   moteurGauche.run(BACKWARD);
   moteurDroit.run(BACKWARD);
 }
-
+ 
 void tournerAngle(bool droite, int angleDegres) {
   vitesseActuelleGauche = 0;
   vitesseActuelleDroite = 0;
@@ -165,14 +167,14 @@ void tournerAngle(bool droite, int angleDegres) {
   moteurDroit.run(RELEASE);
   delay(10);
 }
-
+ 
 void arret() {
   vitesseActuelleGauche = 0;
   vitesseActuelleDroite = 0;
   moteurGauche.run(RELEASE);
   moteurDroit.run(RELEASE);
 }
-
+ 
 int calculerVitesseAdaptative(long distance) {
   if (distance < 0 || distance > SEUIL_DETECTION_CM) {
     return VITESSE_MAX;
@@ -187,19 +189,51 @@ int calculerVitesseAdaptative(long distance) {
   }
 }
 
-int calculerAngleRotation(long distance) {
+bool detecterAngleResserre(long distanceMoyenne, long distance) {
+  if (distanceMoyenne < SEUIL_ALERTE_CM && distanceMoyenne > 1) {
+    long variation = 0;
+    int count = 0;
+    for (int i = 1; i < nbMesuresValides && i < 5; i++) {
+      int idx1 = (indexHistorique - i - 1 + 8) % 8;
+      int idx2 = (indexHistorique - i + 8) % 8;
+      if (historiqueDistance[idx1] < 400 && historiqueDistance[idx2] < 400) {
+        variation += abs(historiqueDistance[idx1] - historiqueDistance[idx2]);
+        count++;
+      }
+    }
+    if (count > 0) {
+      float variationMoyenne = variation / count;
+      if (variationMoyenne < 5 && distanceMoyenne < SEUIL_ALERTE_CM) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+int calculerAngleRotation(long distance, bool estAngle) {
   if (distance >= SEUIL_DETECTION_CM || distance < 0) {
     return 0;
   }
   
   int angleBase = 0;
   
+  if (estAngle || compteurBlocage > 2) {
+    if (compteurBlocage > 3) {
+      return 180;
+    } else if (compteurBlocage > 2) {
+      return 150;
+    } else {
+      return 120;
+    }
+  }
+  
   if (distance < SEUIL_CRITIQUE_CM) {
-    angleBase = 85 + (compteurObstacle * 8) + (compteurBlocage * 15);
-    if (angleBase > 180) angleBase = 180;
+    angleBase = 90 + (compteurObstacle * 6) + (compteurBlocage * 12);
+    if (angleBase > 150) angleBase = 150;
   } else if (distance < SEUIL_ALERTE_CM) {
     float ratio = (float)(SEUIL_ALERTE_CM - distance) / (SEUIL_ALERTE_CM - SEUIL_CRITIQUE_CM);
-    angleBase = 60 + (int)(ratio * 25) + (compteurBlocage * 10);
+    angleBase = 65 + (int)(ratio * 25) + (compteurBlocage * 8);
   } else {
     float ratio = (float)(SEUIL_DETECTION_CM - distance) / (SEUIL_DETECTION_CM - SEUIL_ALERTE_CM);
     angleBase = (int)(ratio * 60);
@@ -232,7 +266,7 @@ void setup() {
     historiqueDistance[i] = 400;
   }
   
-  Serial.println("Robot optimise pret");
+  Serial.println("Robot intelligent pret");
 }
 
 void loop() {
@@ -267,9 +301,11 @@ void loop() {
 
   long distanceUtilisee = calculerDistanceUtilisee(distance, distanceMoyenne);
   unsigned long maintenant = millis();
+  
+  bool estAngleResserre = detecterAngleResserre(distanceMoyenne, distance);
 
   if (distanceUtilisee < SEUIL_CRITIQUE_CM && distanceUtilisee > 1) {
-    if (maintenant - dernierObstacleTemps < 2000) {
+    if (maintenant - dernierObstacleTemps < 1500) {
       compteurBlocage++;
       if (compteurBlocage > 5) compteurBlocage = 5;
     } else {
@@ -278,6 +314,11 @@ void loop() {
     dernierObstacleTemps = maintenant;
   } else if (distanceUtilisee > SEUIL_DETECTION_CM) {
     compteurBlocage = 0;
+    tentativesMemeDirection = 0;
+  }
+
+  if (estAngleResserre) {
+    compteurBlocage = max(compteurBlocage, 2);
   }
 
   Serial.print("Dist:");
@@ -290,9 +331,12 @@ void loop() {
     Serial.print(" bloc:");
     Serial.print(compteurBlocage);
   }
-
+  if (estAngleResserre) {
+    Serial.print(" ANGLE");
+  }
+  
   distancePrecedente = distance;
-
+  
   if (etat == AVANCE_DROIT) {
     if (distanceUtilisee < SEUIL_CRITIQUE_CM && distanceUtilisee > 1) {
       Serial.println(" -> CRITIQUE!");
@@ -300,14 +344,14 @@ void loop() {
       etat = EVITER_OBSTACLE;
       tempsDebut = maintenant;
       arret();
-      delay(8);
+      delay(5);
     } else if (distanceUtilisee < SEUIL_ALERTE_CM && distanceUtilisee > SEUIL_CRITIQUE_CM) {
       if (etat != CORRECTION_FORTE) {
         Serial.println(" -> CORRECTION FORTE");
         etat = CORRECTION_FORTE;
       }
       
-      int angle = calculerAngleRotation(distanceUtilisee);
+      int angle = calculerAngleRotation(distanceUtilisee, estAngleResserre);
       int vitesse = calculerVitesseAdaptative(distanceUtilisee);
       int correction = (angle * vitesse) / 90;
       if (correction < 15) correction = 15;
@@ -325,7 +369,7 @@ void loop() {
         etat = CORRECTION_LEGERE;
       }
       
-      int angle = calculerAngleRotation(distanceUtilisee);
+      int angle = calculerAngleRotation(distanceUtilisee, false);
       int vitesse = calculerVitesseAdaptative(distanceUtilisee);
       int correction = (angle * vitesse) / 150;
       if (correction < 10) correction = 10;
@@ -342,6 +386,7 @@ void loop() {
         etat = AVANCE_DROIT;
         compteurObstacle = 0;
         compteurBlocage = max(0, compteurBlocage - 1);
+        tentativesMemeDirection = 0;
       }
       int vitesse = calculerVitesseAdaptative(distanceUtilisee);
       vitesseCibleGauche = vitesse;
@@ -354,13 +399,14 @@ void loop() {
     if (distanceUtilisee >= SEUIL_DETECTION_CM) {
       etat = AVANCE_DROIT;
       compteurObstacle = 0;
+      tentativesMemeDirection = 0;
     } else if (distanceUtilisee < SEUIL_CRITIQUE_CM && distanceUtilisee > 1) {
       etat = EVITER_OBSTACLE;
       tempsDebut = maintenant;
-      arret();
-      delay(8);
+    arret();
+      delay(5);
     } else {
-      int angle = calculerAngleRotation(distanceUtilisee);
+      int angle = calculerAngleRotation(distanceUtilisee, estAngleResserre);
       int vitesse = calculerVitesseAdaptative(distanceUtilisee);
       int correction = (etat == CORRECTION_FORTE) ? ((angle * vitesse) / 90) : ((angle * vitesse) / 150);
       if (correction < (etat == CORRECTION_FORTE ? 15 : 10)) correction = (etat == CORRECTION_FORTE ? 15 : 10);
@@ -374,27 +420,42 @@ void loop() {
     }
   } else if (etat == EVITER_OBSTACLE) {
     unsigned long tempsEcoule = maintenant - tempsDebut;
-    int dureeRecul = compteurBlocage > 2 ? 120 : 80;
-    int dureeArret = compteurBlocage > 2 ? 140 : 110;
+    
+    int dureeRecul = 80;
+    int dureeArret = 100;
+    
+    if (estAngleResserre || compteurBlocage > 2) {
+      dureeRecul = 150;
+      dureeArret = 120;
+    } else if (compteurBlocage > 1) {
+      dureeRecul = 120;
+      dureeArret = 110;
+    }
 
     if (tempsEcoule < dureeRecul) {
       reculer();
       Serial.println(" -> RECUL");
     } else if (tempsEcoule < dureeArret) {
-      arret();
+    arret();
       Serial.println(" -> ARRET");
     } else {
-      int angle = calculerAngleRotation(distanceUtilisee);
+      int angle = calculerAngleRotation(distanceUtilisee, estAngleResserre);
+    
+      if (tentativesMemeDirection > 2) {
+    tournerDroite = !tournerDroite;
+        tentativesMemeDirection = 0;
+        angle = max(angle, 120);
+      }
       
       if (compteurBlocage > 3) {
         angle = 180;
         Serial.print(" -> ROTATION COMPLETE ");
-      } else if (compteurBlocage > 2) {
-        if (angle < 90) angle = 120;
+      } else if (compteurBlocage > 2 || estAngleResserre) {
+        if (angle < 100) angle = 120;
         if (angle > 180) angle = 180;
       } else {
-        if (angle < 55) angle = 65;
-        if (angle > 120) angle = 120;
+        if (angle < 60) angle = 70;
+        if (angle > 150) angle = 150;
       }
       
       Serial.print(" -> TOURNE ");
@@ -405,12 +466,14 @@ void loop() {
       
       tournerAngle(tournerDroite, angle);
       
-      if (compteurBlocage > 2) {
-        tournerDroite = !tournerDroite;
-      } else {
-        tournerDroite = !tournerDroite;
+      if (angle == dernierAngleRotation && tournerDroite == (dernierAngleRotation > 0)) {
+        tentativesMemeDirection++;
+  } else {
+        tentativesMemeDirection = 0;
       }
       
+      dernierAngleRotation = angle;
+      tournerDroite = !tournerDroite;
       etat = AVANCE_DROIT;
     }
   }
