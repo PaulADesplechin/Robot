@@ -1,4 +1,4 @@
-# Robot Éviteur d'Obstacles
+# Robot Éviteur d'Obstacles (GO FAST)
 
 ## Description
 
